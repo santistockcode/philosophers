@@ -1,0 +1,3 @@
+"""
+Philosophers test suite.
+"""
