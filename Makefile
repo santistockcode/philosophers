@@ -6,7 +6,7 @@
 #    By: saalarco <saalarco@student.42madrid.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/02/16 08:12:02 by saalarco          #+#    #+#              #
-#    Updated: 2026/02/16 08:19:54 by saalarco         ###   ########.fr        #
+#    Updated: 2026/02/24 18:51:10 by saalarco         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -28,13 +28,16 @@ OBJ_DIR = bin/obj/
 BIN_DIR = bin/
 INCLUDE_DIR = include/
 
-# Data races
-LINKER = -lpthread
+# Linker flags
+LDFLAGS = -lpthread
 
 #Files
 
 FILES = \
-main
+main \
+philo_utils \
+alloc_philos_and_forks \
+args_utils
 
 
 # Files add
@@ -48,37 +51,37 @@ all: $(NAME)
 
 # Debug rule
 debug: CFLAGS += -g3 -O0 -DDEBUG
-debug: fclean $(NAME)
+debug: re
 
-# Fsanitize rule
-fsanitize: CFLAGS += -fsanitize=address
-fsanitize: $(NAME)
+# Fsanitize rule (thread sanitizer, more useful for philosophers)
+fsanitize: CFLAGS += -fsanitize=thread -g3 -O0
+fsanitize: LDFLAGS += -fsanitize=thread
+fsanitize: re
 
-# Exec with valgrind
-valgrind: valgrind --tool=helgrind ./$(NAME)
-valgrind: fclean $(NAME)
+# Fsanitize address rule
+fsanitize-addr: CFLAGS += -fsanitize=address -g3 -O0
+fsanitize-addr: LDFLAGS += -fsanitize=address
+fsanitize-addr: re
 
 
 # Comp bin
 $(NAME): $(OBJ) $(LIBFT_NAME)
 	$(MKDIR) $(BIN_DIR)
-	$(CC) $(CFLAGS) $(OBJ) -o $@
+	$(CC) $(CFLAGS) $(OBJ) $(LDFLAGS) -o $@
 
 # Comp .O
 $(OBJ_DIR)%.o: $(SRC_DIR)%.c
 	$(MKDIR) $(dir $@)
-	$(CC) $(CFLAGS) $(LINKER) $(INCLUDE) -c $< -o $@
+	$(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
 
 
 # clean OBJ
 clean:
 	$(RM) $(RMFLAGS) $(OBJ_DIR)
-	$(MAKE) clean
 
 # clean binary OBJ
 fclean: clean
 	$(RM) $(RMFLAGS) $(BIN_DIR) $(NAME)
-	$(MAKE) fclean
 
 # Recompilar todo
 re: fclean all

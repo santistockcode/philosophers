@@ -1,350 +1,157 @@
 #!/usr/bin/env python3
 """
-Minunit unit test compiler and runner for minishell.
-Refactored from unit_tests_exec_part.py
+Compile and run C unit tests using minunit for the philosophers project.
+Scans tests/unit/ for .c files, compiles each one linking against project
+source files (excluding main.c), and runs the resulting binaries.
 """
 
-from posixpath import basename
+import argparse
+import glob
+import os
 import subprocess
 import sys
-import argparse
-from pathlib import Path
-from typing import List, Optional
 
-# Add support directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# ── Paths ───────────────────────────────────────────────────────────────────
+ROOT = os.environ.get("PHILOSOPHERS_ROOT", os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 
-from python_helpers.colors import Colors
-from python_helpers.compilation import ensure_libft_built, run_command
+SRC_DIR = os.path.join(ROOT, "src")
+INCLUDE_DIR = os.path.join(ROOT, "include")
+UNIT_DIR = os.path.join(ROOT, "tests", "unit")
+THIRD_PARTY = os.path.join(ROOT, "tests", "support", "third_party")
+BIN_DIR = os.path.join(UNIT_DIR, "bin")
+VALGRIND_DIR = os.path.join(BIN_DIR, "valgrind-results")
+
+CC = "cc"
+BASE_CFLAGS = [ "-Wextra", "-Werror", "-g3", "-O0",
+               f"-I{INCLUDE_DIR}", f"-I{THIRD_PARTY}", f"-I{SRC_DIR}"]
+LDFLAGS = ["-lpthread"]
 
 
-class UnitTestRunner:
-    """Compiles and runs Minunit unit tests."""
-    
-    def __init__(self, debug: bool = False, valgrind: bool = False, keep_binaries: bool = False):
-        self.project_root = Path(__file__).parent.parent.parent.parent
-        self.test_dir = self.project_root / "tests" / "unit" / "execution"
-        self.bin_dir = self.test_dir / "bin"
-        self.debug = debug
-        self.valgrind = valgrind
-        self.keep_binaries = keep_binaries
-        self.compiled_binaries = []
-        
-        self.bin_dir.mkdir(exist_ok=True)
-    
-    def log(self, message: str, color: str = ""):
-        if color:
-            print(f"{color}{message}{Colors.RESET}")
-        else:
-            print(message)
-    
-    def discover_test_sources(self) -> List[Path]:
-        """Find all test_*.c files."""
-        return sorted(self.test_dir.glob("test_exec_pipeline.c"))
-    
-    def get_dependencies_for_test(self, test_file: Path) -> List[Path]:
-        """Map test files to their source dependencies."""
-        src_dir = self.project_root / "src"
-        
-        deps_map = {
-            "test_set_here_docs.c": [
-                "set_here_docs.c", "expand_hd.c", "expand_hd_utils.c",
-                "free_cmds.c", "syswrap.c", "unlink_hds.c", "exec_errors.c",
-                "signals.c", "crtl.c", "exec_utils.c", "logger.c",
-                "path_utils.c", "exit_utils.c", "fds_utils.c"
-            ],
-            "test_exec_cmds.c": [
-                "exec_cmds.c", "exec_single_cmd.c", "free_cmds.c",
-                "syswrap.c", "exec_errors.c", "set_here_docs.c", "unlink_hds.c",
-                "expand_hd.c", "expand_hd_utils.c", "signals.c", "crtl.c",
-                "exec_utils.c", "logger.c", "tuberiex.c", "exec_stage.c",
-                "path_utils.c", "exit_utils.c", "builtins/export.c",
-                "envp/env_init.c", "envp/free_env.c", "builtins_orq.c", "fds_utils.c",
-                "exec_pipeline.c", "exec_simple.c", "do_first_cmd.c", "builtins/pwd.c",
-                "do_middle_cmds.c", "do_last_cmd.c", "prepare_redirs.c",
-                "prepare_stage_io.c", "prepare_stage_io_utils.c", "builtins/unset.c",
-                "builtins/echo.c", "builtins/env.c", "builtins/exit.c", "../tests/support/c_helpers/exec_cmds_helpers.c",
-                "builtins/cd.c"
-            ],
-            "test_expand_hd.c": [
-                "expand_hd.c", "expand_hd_utils.c", "syswrap.c", "logger.c"
-            ],
-            "test_free_cmds.c": [
-                "free_cmds.c", "logger.c"
-            ],
-            "test_unlink_hds.c": [
-                "unlink_hds.c", "syswrap.c", "free_cmds.c", "logger.c",
-                "tuberiex.c", "exec_utils.c", "exec_errors.c", "exec_stage.c",
-                "builtins/export.c", "path_utils.c", "exit_utils.c",
-                "envp/env_init.c", "envp/free_env.c", "builtins_orq.c", "fds_utils.c",
-                "builtins/unset.c", "builtins/env.c", "builtins/exit.c", "builtins/pwd.c",
-                "builtins/echo.c", "builtins/cd.c"
-            ],
-            "test_exec_errors.c": [
-                "exec_errors.c", "syswrap.c", "logger.c"
-            ],
-            "test_exec_stage.c": [
-                "exec_stage.c", "syswrap.c", "logger.c", 
-                "exec_errors.c", "exec_utils.c", "free_cmds.c", "tuberiex.c",
-                "path_utils.c", "exit_utils.c",
-                "envp/env_init.c", "envp/free_env.c", "builtins_orq.c",
-                "fds_utils.c", "exec_pipeline.c", "exec_simple.c", "do_first_cmd.c",
-                "do_middle_cmds.c", "do_last_cmd.c", "prepare_redirs.c",
-                "prepare_stage_io.c", "prepare_stage_io_utils.c", "builtins/unset.c",
-                "builtins/exit.c", "builtins/pwd.c", "builtins/export.c", "builtins/env.c",
-                "builtins/echo.c", "builtins/cd.c", "signals.c", "crtl.c"
-            ],
-            "test_exec_simple.c": [
-                "exec_stage.c", "syswrap.c", "logger.c", 
-                "exec_errors.c", "exec_utils.c", "free_cmds.c", "tuberiex.c",
-                "builtins/export.c", "path_utils.c", "exit_utils.c",
-                "envp/env_init.c", "envp/free_env.c", "builtins_orq.c",
-                "fds_utils.c", "exec_pipeline.c", "exec_simple.c", "do_first_cmd.c",
-                "do_middle_cmds.c", "do_last_cmd.c", "prepare_redirs.c",
-                "prepare_stage_io.c", "prepare_stage_io_utils.c", "builtins/unset.c",
-                "builtins/echo.c", "builtins/env.c", "builtins/exit.c", "builtins/pwd.c",
-                "builtins/cd.c", "signals.c", "crtl.c"
-            ],
-            "test_exec_pipeline.c": [
-                "syswrap.c", "logger.c",
-                "exec_errors.c", "exec_utils.c", "free_cmds.c", "tuberiex.c",
-                "exec_stage.c","builtins/echo.c", "builtins/env.c",
-                "builtins/export.c", "path_utils.c", "exit_utils.c",
-                "envp/env_init.c", "envp/free_env.c", "builtins_orq.c",
-                "fds_utils.c", "exec_pipeline.c", "exec_simple.c", "prepare_redirs.c",
-                "prepare_stage_io.c", "prepare_stage_io_utils.c", "builtins/unset.c",
-                "builtins/pwd.c","builtins/cd.c", "signals.c", "crtl.c",
-                "builtins/exit.c", "do_first_cmd.c", "do_middle_cmds.c", "do_last_cmd.c",
-            ],
-            "test_builtin_echo.c": [
-                "builtins/echo.c", "syswrap.c", "logger.c", "builtins/env.c", "builtins/exit.c"
-            ],
-            "test_builtin_cd.c": [
-                "builtins/echo.c", "syswrap.c", "logger.c", "builtins/env.c", "builtins/exit.c", "builtins/cd.c",
-                "envp/env_init.c", "envp/free_env.c", "builtins/export.c", "exec_errors.c"
-            ],
-            "test_builtin_exit.c": [
-                "builtins/exit.c", "syswrap.c", "logger.c"
-            ]
-        }
-        
-        deps = deps_map.get(test_file.name, [])
-        return [src_dir / dep for dep in deps]
-    
-    def compile_test(self, test_file: Path) -> Optional[Path]:
-        """Compile a single test file."""
-        binary_name = test_file.stem
-        binary = self.bin_dir / binary_name
-        
-        self.log(f"Compiling {test_file.name}...", Colors.BOLD_BLUE)
-        
-        deps = self.get_dependencies_for_test(test_file)
-        deps.append(self.project_root / "tests" / "support" / "c_helpers" / "test_helpers.c")
+def get_project_sources():
+    """Return all .c files in src/ except main.c"""
+    srcs = glob.glob(os.path.join(SRC_DIR, "**", "*.c"), recursive=True)
+    return [s for s in srcs if not s.endswith("main.c")]
 
-        include_dir = self.project_root / "include"
-        third_party_dir = self.project_root / "tests" / "support" / "third_party"
-        libft_dir = self.project_root / "Libft"
-        libft_lib = libft_dir / "bin" / "libft.a"
-        helpers_dir = self.project_root / "tests" / "support" / "c_helpers"
 
-        cmd = [
-            "cc",
-            "-Wextra", "-Werror",
-        ]
-        
-        if self.debug:
-            cmd.extend(["-g3", "-DDEBUG"])
-        
-        cmd.extend([
-            f"-I{include_dir}",
-            f"-I{libft_dir}/include",
-            f"-I{third_party_dir}",
-            f"-I{helpers_dir}",
-            str(test_file),
-            *[str(d) for d in deps if d.exists()],
-            str(libft_lib),
-            "-lreadline",
-            "-lncurses",
-            "-lm",
-            "-o", str(binary)
-        ])
-        
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            self.log(Colors.error(f"Compilation failed:\n{result.stderr}"))
-            return None
-        
-        self.log(Colors.success(f"Compiled: {binary}"))
-        self.compiled_binaries.append(binary)
-        return binary
-    
-    def run_test(self, binary: Path) -> int:
-        """Run a compiled test binary."""
-        self.log(f"\n{'='*60}", Colors.BOLD_CYAN)
-        self.log(f"Running {binary.name}", Colors.BOLD_CYAN)
-        self.log(f"{'='*60}", Colors.BOLD_CYAN)
+def get_test_sources():
+    """Return all .c files in tests/unit/"""
+    return glob.glob(os.path.join(UNIT_DIR, "**", "test_*.c"), recursive=True)
 
-        if self.valgrind:
-                    valgrind_dir = self.bin_dir / "valgrind-leaks-results"
-                    valgrind_dir.mkdir(exist_ok=True)
-        
-        if self.valgrind:
-            cmd = [
-                "valgrind",
-                "--leak-check=full",
-                "--show-leak-kinds=all",
-                "--trace-children=yes",
-                "--child-silent-after-fork=no",
-                "--track-origins=yes",
-                "--log-file={}/valgrind-leaks-results/valgrind_%p_{}.log".format(self.bin_dir, binary.name),
-                str(binary)
-            ]
-        else:
-            cmd = [str(binary)]
-        
-        result = subprocess.run(cmd)
-        
-        if result.returncode == 0:
-            self.log(Colors.success(f"✓ {binary.name} passed"))
-        else:
-            self.log(Colors.error(f"✗ {binary.name} failed"))
 
-        return result.returncode
-    
-    def cleanup_binaries(self):
-        """Remove compiled binaries."""
-        if self.keep_binaries:
-            self.log(Colors.info("Keeping binaries for inspection"))
-            return
-        
-        for binary in self.compiled_binaries:
-            if binary.exists():
-                binary.unlink()
-        
-        if self.bin_dir.exists() and not any(self.bin_dir.iterdir()):
-            self.bin_dir.rmdir()
+def compile_test(test_src, project_srcs, extra_cflags=None):
+    """Compile a single test file into an executable."""
+    os.makedirs(BIN_DIR, exist_ok=True)
+    test_name = os.path.splitext(os.path.basename(test_src))[0]
+    out_path = os.path.join(BIN_DIR, test_name)
 
-        if self.valgrind:
-            self.log(Colors.info("Cleaning up Valgrind logs"))
-            valgrind_dir = self.bin_dir / "valgrind-leaks-results"
-            if valgrind_dir.exists():
-                for log_file in valgrind_dir.glob("*.log"):
-                    if log_file.exists():
-                        log_file.unlink()
-                # Remove directory if empty
-                if not any(valgrind_dir.iterdir()):
-                    valgrind_dir.rmdir()
+    cmd = [CC] + BASE_CFLAGS + (extra_cflags or []) + \
+          [test_src] + project_srcs + LDFLAGS + ["-o", out_path]
 
-        self.log(Colors.success("Cleaned up binaries"))
-    
-    def run_all_tests(self) -> bool:
-        """Discover, compile, and run all tests."""
-        test_sources = self.discover_test_sources()
-        
-        if not test_sources:
-            self.log(Colors.warning("No test files found"))
-            return False
-        
-        self.log(f"\nFound {len(test_sources)} test file(s)", Colors.BOLD_GREEN)
-        
-        # Compile all tests
-        failed_compilation = []
-        for test_file in test_sources:
-            binary = self.compile_test(test_file)
-            if not binary:
-                failed_compilation.append(test_file)
-        
-        if failed_compilation:
-            self.log(Colors.error(f"\n{len(failed_compilation)} test(s) failed to compile"))
-            return False
-        
-        # Run all tests
-        failed_tests = []
-        for binary in self.compiled_binaries:
-            if self.run_test(binary) != 0:
-                failed_tests.append(binary)
-        
-        # Summary
-        self.log(f"\n{'='*60}", Colors.BOLD_CYAN)
-        self.log("Test Summary", Colors.BOLD_CYAN)
-        self.log(f"{'='*60}", Colors.BOLD_CYAN)
-        
-        total = len(self.compiled_binaries)
-        passed = total - len(failed_tests)
-        
-        self.log(f"Total:  {total}")
-        self.log(Colors.success(f"Passed: {passed}"))
-        
-        if failed_tests:
-            self.log(Colors.error(f"Failed: {len(failed_tests)}"))
-            for binary in failed_tests:
-                self.log(f"  - {binary.name}", Colors.RED)
-            return False
-        
-        return True
+    print(f"\033[36m[COMPILE]\033[0m {test_name}")
+    print(f"  {' '.join(cmd)}")
+    result = subprocess.run(cmd)
+    if result.returncode != 0:
+        print(f"\033[31m[FAIL]\033[0m Compilation failed for {test_name}")
+        return None
+    return out_path
 
-    def print_valgrind_summary(self):
-        """Print a summary of Valgrind logs."""
-        self.log(f"\n{'='*60}", Colors.BOLD_CYAN)
-        self.log("Valgrind Summary", Colors.BOLD_CYAN)
-        self.log(f"{'='*60}", Colors.BOLD_CYAN)
 
-        for binary in self.compiled_binaries:
-            valgrind_dir = self.bin_dir / "valgrind-leaks-results"
-            if valgrind_dir.exists():
-                for log_file in valgrind_dir.glob("*.log"):
-                    self.log(f"\nValgrind log: {log_file.name}", Colors.BOLD_BLUE)
-                    with log_file.open() as f:
-                        self.log(f.read())
-            else:
-                self.log(Colors.warning("No Valgrind logs directory found"))
-                return
+def run_test(binary_path, use_valgrind=False):
+    """Run a compiled test binary, optionally under valgrind --tool=helgrind."""
+    test_name = os.path.basename(binary_path)
+    print(f"\n\033[33m[RUN]\033[0m {test_name}")
 
-        self.log(f"{'='*60}", Colors.BOLD_CYAN)
+    if use_valgrind:
+        os.makedirs(VALGRIND_DIR, exist_ok=True)
+        log_file = os.path.join(VALGRIND_DIR, f"{test_name}.log")
+        cmd = ["valgrind", "--tool=helgrind", "--log-file=" + log_file,
+               binary_path]
+    else:
+        cmd = [binary_path]
+
+    result = subprocess.run(cmd)
+    status = "\033[32m[PASS]\033[0m" if result.returncode == 0 \
+        else "\033[31m[FAIL]\033[0m"
+    print(f"{status} {test_name} (exit {result.returncode})")
+
+    if use_valgrind:
+        print(f"  Helgrind log: {log_file}")
+
+    return result.returncode == 0
+
+
+def clean_bin():
+    """Remove compiled test binaries."""
+    import shutil
+    if os.path.isdir(BIN_DIR):
+        shutil.rmtree(BIN_DIR)
+        print("[CLEAN] Removed", BIN_DIR)
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Minunit unit test compiler and runner",
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-    
-    parser.add_argument('--debug', action='store_true', help='Compile with debug flags')
-    parser.add_argument('--valgrind', action='store_true', help='Run tests under Valgrind')
-    parser.add_argument('--keep_bin', action='store_true', help='Keep compiled binaries')
-    parser.add_argument('--run', action='store_true', help='Run tests after compilation')
-    parser.add_argument('--clean', action='store_true', help='Clean compiled binaries')
-    
+    parser = argparse.ArgumentParser(description="Compile & run philo unit tests")
+    parser.add_argument("--run", action="store_true", help="Compile and run")
+    parser.add_argument("--valgrind", action="store_true",
+                        help="Run under valgrind --tool=helgrind")
+    parser.add_argument("--keep_bin", action="store_true",
+                        help="Keep binaries after running")
+    parser.add_argument("--debug", action="store_true",
+                        help="Add -O0 -DDEBUG flags")
+    parser.add_argument("--fsanitize", choices=["thread", "address"],
+                        help="Add -fsanitize flag")
+    parser.add_argument("--clean", action="store_true",
+                        help="Clean test binaries")
     args = parser.parse_args()
-    
-    runner = UnitTestRunner(
-        debug=args.debug,
-        valgrind=args.valgrind,
-        keep_binaries=args.keep_bin
-    )
-    
+
     if args.clean:
-        runner.cleanup_binaries()
-        return 0
-    
-    # Ensure libft is built
-    project_root = Path(__file__).parent.parent.parent.parent
-    if not ensure_libft_built(project_root / "Libft"):
-        return 1
-    
-    # Compile (and optionally run) tests
-    success = runner.run_all_tests() if args.run else True
+        clean_bin()
+        return
 
-    # Print summary of valgrind logs
-    if args.valgrind:
-        runner.print_valgrind_summary()
+    if not args.run:
+        parser.print_help()
+        return
 
-    # Cleanup unless keeping binaries
-    if not args.keep_bin:
-        runner.cleanup_binaries()
-    
-    return 0 if success else 1
+    extra_cflags = []
+    if args.debug:
+        extra_cflags += ["-DDEBUG"]
+    if args.fsanitize:
+        extra_cflags += [f"-fsanitize={args.fsanitize}"]
+        LDFLAGS.append(f"-fsanitize={args.fsanitize}")
+
+    project_srcs = get_project_sources()
+    test_srcs = get_test_sources()
+
+    if not test_srcs:
+        print("\033[33m[WARN]\033[0m No test files found in", UNIT_DIR)
+        sys.exit(0)
+
+    print(f"Found {len(test_srcs)} test file(s), "
+          f"{len(project_srcs)} project source(s)\n")
+
+    results = []
+    for tsrc in test_srcs:
+        binary = compile_test(tsrc, project_srcs, extra_cflags)
+        if binary is None:
+            results.append(False)
+            continue
+        passed = run_test(binary, use_valgrind=args.valgrind)
+        results.append(passed)
+
+    # if not args.keep_bin:
+    #     clean_bin()
+
+    # Summary
+    total = len(results)
+    passed = sum(results)
+    failed = total - passed
+    print(f"\n{'='*50}")
+    print(f"Unit tests: {passed}/{total} passed, {failed} failed")
+    print(f"{'='*50}")
+
+    if failed > 0:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
