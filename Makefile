@@ -36,8 +36,15 @@ LDFLAGS = -lpthread
 FILES = \
 main \
 philo_utils \
-alloc_philos_and_forks \
-args_utils
+alloc_utils \
+mutex_utils \
+args_utils \
+init_philos \
+create_threads_and_join \
+time_utils \
+routine \
+do_sleep \
+state_messages
 
 
 # Files add

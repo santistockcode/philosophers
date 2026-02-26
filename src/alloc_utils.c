@@ -14,6 +14,27 @@
 
 void	*ft_calloc(size_t count, size_t size);
 
+void free_threads(t_data *data)
+{
+	free(data->threads);
+}
+
+// alloc philos + 1 para el monitor
+int alloc_threads(t_data *data)
+{
+	data->threads = ft_calloc(data->num_philos + 1, sizeof(pthread_t));
+	if (data->threads == NULL)
+		return (1);
+	return (0);
+}
+
+void free_philos_and_forks(t_data *data)
+{
+	free(data->philos);
+	free(data->m_forks);
+	free(data->forks);
+}
+
 int	alloc_philos_and_forks(t_data *data)
 {
 	data->forks = (unsigned char *) ft_calloc(data->num_philos, sizeof(unsigned char *));
