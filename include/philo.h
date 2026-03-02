@@ -43,7 +43,7 @@ typedef struct s_data
     long long ttd;
     long long tte;
     long long tts;
-    int num_meals;
+    int num_meals; // not specified in subject, I I've decided that is gonna be 1 or more, else is invalid
     // forks
     pthread_mutex_t *m_forks;
     t_bool *forks;

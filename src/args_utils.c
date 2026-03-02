@@ -24,10 +24,14 @@ int	parse_args(int argc, char const **argv, t_data *data)
 	data->tte = ft_atoi(argv[3]);
 	data->tts = ft_atoi(argv[4]);
 	if (argc == 6)
+	{
 		data->num_meals = ft_atoi(argv[5]);
+		if (data->num_meals == 0)
+			return (printf("Invalid arguments\n"), (1));
+	}
 	else
-		data->num_meals = -1;
-	if (data->num_philos <= 0 || data->ttd < 0 || data->tte < 0 || data->tts < 0 || data->num_meals < -1)
+		data->num_meals = 0;
+	if (data->num_philos <= 0 || data->ttd <= 0 || data->tte <= 0 || data->tts <= 0 || data->num_meals < 0)
 		return (printf("Invalid arguments\n"), (1));
 	return (0);
 }

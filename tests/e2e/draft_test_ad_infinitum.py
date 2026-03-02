@@ -1,0 +1,1 @@
+# timeout in previous tests counts on limited or at least controlled amount of time, check what happens if the programs runs for 3 minutes for example. 

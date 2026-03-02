@@ -49,7 +49,6 @@ int	main(int argc, char const **argv)
     if (alloc_threads(&data))
         return (printf("Malloc error\n"), destroy_philos(&data), data_mutex_destroy(&data), free_philos_and_forks(&data), 1);
 
-    printf("Create thrads and join\n");
     create_threads_and_join(&data);
 
     // TODO: refactor este return en una función en alloc utils

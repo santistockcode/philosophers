@@ -29,6 +29,7 @@ void create_threads_and_join(t_data *data)
         handle_single_philo(data);
         return ;
     }
+    data->start_time = get_timestamp_ms(data);
     index = 0;
     while (index < data->num_philos)
     {

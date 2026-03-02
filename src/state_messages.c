@@ -9,6 +9,6 @@ void print_sleep(t_data* data, t_philo *philo)
         pthread_mutex_unlock(&data->m_write);
         return ;
     }
-    printf("%lld %d \tis sleeping\n", get_timestamp_ms(data), philo->id);
+    printf("%lld \t%d \tis sleeping\n", get_timestamp_ms(data), philo->id);
     pthread_mutex_unlock(&data->m_write);
 }

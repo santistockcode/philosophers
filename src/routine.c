@@ -22,8 +22,9 @@ void *routine(void *arg)
     
     while (1)
     {
-        printf("%lld %d \tsimplemente existe\n", get_timestamp_ms(philo->data), philo->id);
+        printf("%lld \t%d \tis thinking\n", get_timestamp_ms(philo->data), philo->id);
         do_sleep(philo);
+
     }
     return (NULL);
 }

@@ -8,6 +8,8 @@ import time
 import pexpect
 import pytest
 
+import pdb
+
 
 class TestArgValidation:
     """Test argument validation."""
@@ -21,6 +23,18 @@ class TestArgValidation:
 
     def test_negative_args(self, run_philo):
         child = run_philo("-5 800 200 200", timeout=5)
+        child.expect(pexpect.EOF)
+        child.close()
+        assert child.exitstatus != 0
+
+    def test_invalid_args_1(self, run_philo):
+        child = run_philo("abc 800 200 200", timeout=5)
+        child.expect(pexpect.EOF)
+        child.close()
+        assert child.exitstatus != 0
+
+    def test_invalid_args_last(self, run_philo):
+        child = run_philo("15 800 200 200 xyz", timeout=5)
         child.expect(pexpect.EOF)
         child.close()
         assert child.exitstatus != 0
@@ -41,14 +55,23 @@ class TestArgValidation:
 class TestBasicExecution:
     """Test that philos produce expected output format."""
 
+    def test_one_philo_dies(self, run_philo):
+        """One philosopher should die (can't take 2 forks)."""
+        child = run_philo("1 800 200 200", timeout=5)
+        child.expect(r"\d+\s+1\s+died")
+        child.close()
+
+    #1407 \t1 \tis sleeping\r\n
     def test_output_format(self, run_philo):
         """Every line should match: <timestamp> <id> <action>"""
-        child = run_philo("4 800 200 200 3", timeout=15)
+        # pdb.set_trace()
+        child = run_philo("4 800 200 200 3", timeout=10)
         child.expect(pexpect.EOF)
         output = child.before
         lines = [l.strip() for l in output.strip().split("\n") if l.strip()]
+        # ['1 \t1 \tis thinking', '1 \t1 \tis sleeping', '1 \t2 \tis thinking', '1 \t2 \tis sleeping', '1 \t3 \tis thinking', '1 \t3 \tis sleeping', '1 \t4 \tis thinking', '1 \t4 \tis sleeping', '202 \t3 \tis thinking', '202 \t3 \tis sleeping', '202 \t1 \tis thinking', '202 \t1 \tis sleeping', '202 \t4 \tis thinking', '202 \t4 \tis sleeping', '202 \t2 \tis thinking', '202 \t2 \tis sleeping']
         pattern = re.compile(
-            r"^\d+\s+\d+\s+"
+            r"^\d+\s+\t+\d+\s+\t"
             r"(has taken a fork|is eating|is sleeping|is thinking|died)$"
         )
         for line in lines:
@@ -61,12 +84,8 @@ class TestBasicExecution:
         child.expect(pexpect.EOF)
         output = child.before
         assert "died" not in output
+    
 
-    def test_one_philo_dies(self, run_philo):
-        """One philosopher should die (can't take 2 forks)."""
-        child = run_philo("1 800 200 200", timeout=5)
-        child.expect(r"\d+\s+1\s+died")
-        child.close()
 
 
 class TestTimingConstraints:
