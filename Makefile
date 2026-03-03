@@ -6,7 +6,7 @@
 #    By: saalarco <saalarco@student.42madrid.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/02/16 08:12:02 by saalarco          #+#    #+#              #
-#    Updated: 2026/02/24 18:51:10 by saalarco         ###   ########.fr        #
+#    Updated: 2026/03/03 18:03:29 by saalarco         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -43,6 +43,7 @@ init_philos \
 create_threads_and_join \
 time_utils \
 routine \
+routine_monitor \
 do_sleep \
 state_messages
 

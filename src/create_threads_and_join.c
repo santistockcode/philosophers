@@ -3,6 +3,7 @@
 
 // routine.c
 void *routine(void *arg);
+void *routine_monitor(void *arg);
 
 // create_threads_and_join.c
 // caso 1 unico philo (buen momento para implementar los mensajes)
@@ -36,13 +37,15 @@ void create_threads_and_join(t_data *data)
         pthread_create(&data->threads[index], NULL, routine, &data->philos[index]);
         index++;
     }
-    // pthread_create(&data->threads[index], NULL, monitor_routine, data);
+    pthread_create(&data->threads[index], NULL, routine_monitor, data);
     index = 0;
     while (index < data->num_philos)
     {
         pthread_join(data->threads[index], NULL);
         index++;
     }
-    // data->status = 1;
-    // pthread_join(data->threads[index], NULL);
+    pthread_mutex_lock(&data->m_write);
+	data->mute = ON;
+	pthread_mutex_unlock(&data->m_write);
+    pthread_join(data->threads[index], NULL);
 }

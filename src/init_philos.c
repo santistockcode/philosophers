@@ -36,9 +36,16 @@ int init_philos(t_data *data)
         (data->philos[index]).ttd = data->ttd;
         (data->philos[index]).tte = data->tte;
         (data->philos[index]).tts = data->tts;
-        (data->philos[index]).num_meals = 0;
+        (data->philos[index]).meals_eaten = 0;
+        (data->philos[index]).max_meals = 0;
         (data->philos[index]).data = data;
-        // TODO: si hubiese max number of meals, lo guardaríamos aquí
+        if (data->num_meals > 0)
+        {
+            (data->philos[index]).max_arg = ON;
+            (data->philos[index]).max_meals = data->num_meals;
+        }
+        else
+            (data->philos[index]).max_arg = OFF;
         // asigna tenedores
         (data->philos[index]).l_fork = ((data->forks)[index]);
         if (index == data->num_philos - 1)

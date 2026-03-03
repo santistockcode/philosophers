@@ -23,10 +23,12 @@ typedef struct s_philo
     long long ttd;
     long long tte;
     long long tts;
-    int num_meals;
+    int max_meals;
+    t_bool max_arg; // if last argument was included or not
     // last meal time stamp (when it STARTED eating)
     pthread_mutex_t m_last_meal;
-    long long last_meal;
+    long long last_meal; // protected by m_last_meal
+    int meals_eaten; // protected by m_last_meal
     // left/ritght fork
     pthread_mutex_t *m_l_fork;
     t_bool l_fork;
@@ -49,7 +51,7 @@ typedef struct s_data
     t_bool *forks;
     // writing
     pthread_mutex_t m_write;
-    t_bool mute; // if someone dies mute turns to 1 (luego está en los utils de mensajes)
+    t_bool mute; // if philos ended mute turns to 1 (luego está en los utils de mensajes)
     // death check
     pthread_mutex_t		m_status; // wrapper for status
 	t_bool		status; // coordinates monitor (someone died?) with usleep (don't start sleeping if someone died)
@@ -67,5 +69,8 @@ t_bool	do_sleep(t_philo *philo);
 // time_utils.c
 long long get_timestamp_ms(t_data *data);
 void precise_usleep(long long us, t_data *data);
+
+// state_messages.c
+void print_someone_died(t_data* data, t_philo* philo);
 
 #endif
