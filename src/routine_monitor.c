@@ -37,7 +37,7 @@ int	check_end(t_data *data, t_philo *philos)
 
 // int check_dead()
 
-// TODO: aunque la versión de danielaco parece má limpia esto es más legible
+// TODO: si me da problemas puedo chequear alternativamente si mueren o si han comido
 void *routine_monitor(void *arg)
 {
 	t_data *data = (t_data *) arg;

@@ -45,6 +45,7 @@ time_utils \
 routine \
 routine_monitor \
 do_sleep \
+do_eat \
 state_messages
 
 

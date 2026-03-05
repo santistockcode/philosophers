@@ -15,38 +15,25 @@ Eso es todo, la coordinación va con los mutex, no tengo que manejarlo
             // pensar (con la variable esa a 1 de antes)
 
 long long get_timestamp_ms(t_data *data);
-void print_eat(t_data *data, t_philo *philo);
-
-// NOT REALLY BUT LET'S CHECKIN
-void	last_meal_checkin(t_philo *philo)
-{
-    // en caso de que vaya a sobrevivir
-	if (philo->ttd > philo->tte + philo->tts)
-	{
-		pthread_mutex_lock(&philo->m_last_meal);
-		philo->last_meal = get_timestamp_ms(philo->data);
-		pthread_mutex_unlock(&philo->m_last_meal);
-	}
-    precise_usleep(philo->tte, philo->data);
-    // FIXME: el subject dice que guardemos el momento de EMPEZAR a comer
-    // triquiñuela porque previamente ya ha comprobado que va a sobrevivir
-	// pthread_mutex_lock(&philo->m_last_meal);
-	// philo->last_meal = get_timestamp_ms(philo->data);
-	// pthread_mutex_unlock(&philo->m_last_meal);
-}
 
 void *routine(void *arg)
 {
     t_philo *philo = (t_philo *)arg;
     
+    pthread_mutex_lock(&philo->m_last_meal);
+    philo->last_meal = get_timestamp_ms(philo->data);
+	pthread_mutex_unlock(&philo->m_last_meal);
+    // ÑAPA para sincronizar pares e impares ¿?
+    // if (is_odd(philo->id))
+    //     usleep(50);
     while (1)
     {
-        print_eat(philo->data, philo);
-        last_meal_checkin(philo);
-        pthread_mutex_lock(&philo->m_last_meal); 
-        philo->meals_eaten++;
-        pthread_mutex_lock(&philo->m_last_meal);
-        do_sleep(philo);        
+        if (!(do_eat(philo)) || !(do_sleep(philo)))
+        {
+            break ;
+        }
+        //ÑAPA: si son tres
+        print_think(philo->data, philo);
     }
     return (NULL);
 }

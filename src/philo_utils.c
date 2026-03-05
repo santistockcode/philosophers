@@ -12,6 +12,13 @@
 
 #include "philo.h"
 
+int is_odd(int id)
+{
+	if (id % 2 != 0)
+		return (0);
+	return (1);
+}
+
 int	ft_isdigit(int c)
 {
 	if (c >= '0' && c <= '9')

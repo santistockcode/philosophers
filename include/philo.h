@@ -51,7 +51,7 @@ typedef struct s_data
     t_bool *forks;
     // writing
     pthread_mutex_t m_write;
-    t_bool mute; // if philos ended mute turns to 1 (luego está en los utils de mensajes)
+    t_bool mute; // if philos ended mute turns to 1 (luego está en los utils de mensajes), coordina 
     // death check
     pthread_mutex_t		m_status; // wrapper for status
 	t_bool		status; // coordinates monitor (someone died?) with usleep (don't start sleeping if someone died)
@@ -64,13 +64,21 @@ typedef struct s_data
 void create_threads_and_join(t_data *data);
 
 // roles
-t_bool	do_sleep(t_philo *philo);
+int do_sleep(t_philo *philo);
+int do_eat(t_philo *philo);
 
 // time_utils.c
-long long get_timestamp_ms(t_data *data);
-void precise_usleep(long long us, t_data *data);
+long long   get_timestamp_ms(t_data *data);
+void        precise_usleep(long long us, t_data *data);
 
 // state_messages.c
-void print_someone_died(t_data* data, t_philo* philo);
+void    print_someone_died(t_data* data, t_philo* philo);
+void    print_sleep(t_data* data, t_philo *philo);
+void    print_eat(t_data *data, t_philo *philo);
+void    print_fork(t_data *data, t_philo *philo);
+void    print_think(t_data *data, t_philo *philo);
+
+// philo_utils.c
+int is_odd(int id);
 
 #endif
