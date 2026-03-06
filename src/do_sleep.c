@@ -7,9 +7,9 @@ int do_sleep(t_philo *philo)
     if (philo->data->status == ON)
     {
         pthread_mutex_unlock(&philo->data->m_status);
-        return (0);
+        return (1);
     }
     pthread_mutex_unlock(&philo->data->m_status);
     print_sleep(philo->data, philo);
-    return (precise_usleep(philo->tts, philo->data), 1);
+    return (precise_usleep(philo->tts, philo->data), 0);
 }

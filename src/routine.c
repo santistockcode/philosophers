@@ -23,12 +23,12 @@ void *routine(void *arg)
     pthread_mutex_lock(&philo->m_last_meal);
     philo->last_meal = get_timestamp_ms(philo->data);
 	pthread_mutex_unlock(&philo->m_last_meal);
-    // ÑAPA para sincronizar pares e impares ¿?
-    // if (is_odd(philo->id))
-    //     usleep(50);
+    // ÑAPA: sincronizar pares e impares
+    if (is_odd(philo->id))
+        usleep(50);
     while (1)
     {
-        if (!(do_eat(philo)) || !(do_sleep(philo)))
+        if ((do_eat(philo) == 1) || (do_sleep(philo) == 1))
         {
             break ;
         }

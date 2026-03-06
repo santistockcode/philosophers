@@ -5,6 +5,7 @@
 void *routine(void *arg);
 void *routine_monitor(void *arg);
 
+
 // create_threads_and_join.c
 // caso 1 unico philo (buen momento para implementar los mensajes)
 // inicia el timer (esto ya lo tengo)
