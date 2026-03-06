@@ -31,9 +31,9 @@ typedef struct s_philo
     int meals_eaten; // protected by m_last_meal
     // left/ritght fork
     pthread_mutex_t *m_l_fork;
-    t_bool l_fork;
+    t_bool *l_fork;
     pthread_mutex_t *m_r_fork;
-    t_bool r_fork;
+    t_bool *r_fork;
     // data
     t_data *data;
 }   t_philo;
@@ -69,7 +69,7 @@ int do_eat(t_philo *philo);
 
 // time_utils.c
 long long   get_timestamp_ms(t_data *data);
-void        precise_usleep(long long us, t_data *data);
+int        precise_usleep(long long us, t_data *data);
 
 // state_messages.c
 void    print_someone_died(t_data* data, t_philo* philo);
@@ -77,8 +77,10 @@ void    print_sleep(t_data* data, t_philo *philo);
 void    print_eat(t_data *data, t_philo *philo);
 void    print_fork(t_data *data, t_philo *philo);
 void    print_think(t_data *data, t_philo *philo);
+// void    print_release_fork(t_data *data, t_philo *philo);
 
 // philo_utils.c
 int is_odd(int id);
+int is_even(int id);
 
 #endif

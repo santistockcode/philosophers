@@ -18,7 +18,7 @@ void *routine_monitor(void *arg);
 static void handle_single_philo(t_data *data)
 {
     printf("0\t%d has taken a fork\n", 1);
-    usleep(data->ttd * 1000);
+    usleep(data->ttd);
     printf("%lld\t%d died\n", data->ttd, 1);
 }
 

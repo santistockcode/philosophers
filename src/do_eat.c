@@ -2,7 +2,7 @@
 
 // la flag de coger y descoger el tenedor está controlada por m_left o m_right respectivamente
 
-void	meal_clock_in(t_philo *philo)
+int	meal_clock_in(t_philo *philo)
 {
     // si va a sobrevivir sea par o impar
 	// if (philo->ttd > philo->tte + philo->tts)
@@ -11,7 +11,7 @@ void	meal_clock_in(t_philo *philo)
     philo->last_meal = get_timestamp_ms(philo->data);
     pthread_mutex_unlock(&philo->m_last_meal);
 	// }
-    precise_usleep(philo->tte, philo->data);
+    return (precise_usleep(philo->tte, philo->data));
     // FIXME: el subject dice que guardemos el momento de EMPEZAR a comer
     // "si un filósofo no empieza a comer en time_to_die milisegundos desde que comenzó su ultima comida"
 	// pthread_mutex_lock(&philo->m_last_meal);
@@ -35,24 +35,24 @@ int take_fork(t_philo *philo)
     pthread_mutex_t *m_fork[2];
     t_bool *p_fork[2];
 
-    // en caso de ser par chequeamos primero el izquierdo luego el derecho
-    if (philo->id % 2 == 0)
+    // ñapa
+    if (is_odd(philo->id) == 0) // 2
     {
         m_fork[0] = philo->m_l_fork;
-        p_fork[0] = &philo->l_fork;
+        p_fork[0] = philo->l_fork;
         m_fork[1] = philo->m_r_fork;
-        p_fork[1] = &philo->r_fork;
+        p_fork[1] = philo->r_fork;
     }
-    else    // si el id es impar al revés
+    else // 1
     {
         m_fork[0] = philo->m_r_fork;
-        p_fork[0] = &philo->r_fork;
+        p_fork[0] = philo->r_fork;
         m_fork[1] = philo->m_l_fork;
-        p_fork[1] = &philo->l_fork;
+        p_fork[1] = philo->l_fork;
     }
     // TRY FORK [0]
-    // ÑAPA: si son impares y es un philo impar
-    if (philo->data->num_philos % 2 == 1 && philo->id % 2 != 0)
+    // ñapa
+    if ((is_odd(philo->data->num_philos) == 0) && (is_even(philo->id) == 0))
         usleep(50);
     pthread_mutex_lock(m_fork[0]);
     while(*p_fork[0] != OFF) // hasta que esté por primera vez disponible
@@ -65,14 +65,16 @@ int take_fork(t_philo *philo)
             return (1);
         }
         pthread_mutex_unlock(&philo->data->m_write);
-        precise_usleep(10, philo->data); // TODO: protect
+        if (precise_usleep(10, philo->data) == 1)
+            return (1);
         pthread_mutex_lock(m_fork[0]);
     }
     *p_fork[0] = ON; // we take the fucking fork 0
     pthread_mutex_unlock(m_fork[0]);
     print_fork(philo->data, philo);
     // TRY FORK [1]
-    if (philo->data->num_philos % 2 == 1 && philo->id % 2 != 0)
+    // ñapa
+    if((is_odd(philo->data->num_philos) == 0) && (is_even(philo->id) == 0))
         usleep(50);
     pthread_mutex_lock(m_fork[1]);
     while(*p_fork[1] != OFF) // hasta que esté por primera vez disponible
@@ -85,7 +87,8 @@ int take_fork(t_philo *philo)
             return (1);
         }
         pthread_mutex_unlock(&philo->data->m_write);
-        precise_usleep(10, philo->data); // TODO: protect
+        if (precise_usleep(10, philo->data) == 1)
+            return (1);
         pthread_mutex_lock(m_fork[1]);
     }
     *p_fork[1] = ON; // we take the fucking fork 1
@@ -94,37 +97,40 @@ int take_fork(t_philo *philo)
     return (0);
 }
 
-static void	release_fork(t_philo *philo)
+static void	release_forks(t_philo *philo)
 {
     pthread_mutex_t *m_fork[2];
     t_bool *p_fork[2];
 
-    // soltamos también en orden
-    if (philo->id % 2 == 0)
+    // ñapa
+    if (is_odd(philo->id) == 0)
     {
         m_fork[0] = philo->m_l_fork;
-        p_fork[0] = &philo->l_fork;
+        p_fork[0] = philo->l_fork;
         m_fork[1] = philo->m_r_fork;
-        p_fork[1] = &philo->r_fork;
+        p_fork[1] = philo->r_fork;
     }
     else
     {
         m_fork[0] = philo->m_r_fork;
-        p_fork[0] = &philo->r_fork;
+        p_fork[0] = philo->r_fork;
         m_fork[1] = philo->m_l_fork;
-        p_fork[1] = &philo->l_fork;
+        p_fork[1] = philo->l_fork;
     }
-	pthread_mutex_lock(m_fork[0]);
-	*p_fork[0] = OFF;
-	pthread_mutex_unlock(m_fork[0]);
+    pthread_mutex_lock(m_fork[0]);
+    *p_fork[0] = OFF;
+    // print_release_fork(philo->data, philo);
+    pthread_mutex_unlock(m_fork[0]);
     pthread_mutex_lock(m_fork[1]);
-	*p_fork[1] = OFF;
-	pthread_mutex_unlock(m_fork[1]);
+    *p_fork[1] = OFF;
+    // print_release_fork(philo->data, philo);
+    pthread_mutex_unlock(m_fork[1]);
 }
 
 // si do_eat devuelve 1 es para decirle a la rutina: hasta aquí hemos llegado, mátame camión.
 int do_eat(t_philo *philo)
 {
+    int result_sleep;
     // COMPROBAR TENEDORES y lockearlos
     // si hemos llegado hasta aquí imprimir que comemos, si no devolver 1
     // updatear last_meal
@@ -136,11 +142,14 @@ int do_eat(t_philo *philo)
     if (take_fork(philo) == 1)
         return (1);
     print_eat(philo->data, philo);
-    meal_clock_in(philo);
-    release_fork(philo);
-    pthread_mutex_lock(&philo->m_last_meal); 
-    philo->meals_eaten++;
-    pthread_mutex_unlock(&philo->m_last_meal);
+    result_sleep = meal_clock_in(philo);
+    release_forks(philo);
+    if (result_sleep == 0)
+    {
+        pthread_mutex_lock(&philo->m_last_meal); 
+        philo->meals_eaten++;
+        pthread_mutex_unlock(&philo->m_last_meal);
+    }
     if (philo->max_arg == ON && philo->meals_eaten >= philo->max_meals)
         return (1);
     return (0);    

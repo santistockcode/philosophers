@@ -23,16 +23,14 @@ void *routine(void *arg)
     pthread_mutex_lock(&philo->m_last_meal);
     philo->last_meal = get_timestamp_ms(philo->data);
 	pthread_mutex_unlock(&philo->m_last_meal);
-    // ÑAPA: sincronizar pares e impares
-    if (is_odd(philo->id))
+    // ñapa
+    if (is_even(philo->id) == 0)
         usleep(50);
     while (1)
     {
         if ((do_eat(philo) == 1) || (do_sleep(philo) == 1))
-        {
             break ;
-        }
-        //ÑAPA: si son tres
+        //TODO: si son tres
         print_think(philo->data, philo);
     }
     return (NULL);

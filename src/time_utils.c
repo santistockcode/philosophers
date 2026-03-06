@@ -42,7 +42,7 @@ also
 FIXME: reality is that we want to add times eaten ONCE sleep is finished, if it doesn't finish
 the philo didn't really ate, maybe they just started and we would be counting it wrong. 
 */
-void precise_usleep(long long us, t_data *data)
+int precise_usleep(long long us, t_data *data)
 {
 	long long now;
 	long long later;
@@ -54,12 +54,13 @@ void precise_usleep(long long us, t_data *data)
 		if (data->status == ON)
 		{
 			pthread_mutex_unlock(&data->m_status);
-			return ;
+			return (1);
 		}
 		pthread_mutex_unlock(&data->m_status);
 		usleep(50);
 		later = get_timestamp_ms(data);		
-		if ((later - now) > us)
+		if ((later - now) >= us)
 				break;
 	}
+	return (0);
 }

@@ -10,7 +10,6 @@ int is_philo_dead(t_data *data, t_philo *philo)
 		philo->ttd)
 	{
 		pthread_mutex_unlock(&philo->m_last_meal);
-		// aquí devolvemos 1 porque lo que hay que chequear es que todos hayan comido al menos X veces (para esto se usa el mute)
 		if (philo->max_arg == ON && philo->meals_eaten >= philo->max_meals)
 			return (1);
 		pthread_mutex_lock(&data->m_status);
@@ -28,7 +27,7 @@ int	check_end(t_data *data, t_philo *philos)
 	int	i;
 
 	i = 0;
-	while (i < philos[0].data->num_philos)
+	while (i < data->num_philos)
 	{
 		if (is_philo_dead(data, &philos[i]) == 0)
 			return (1);
@@ -48,9 +47,11 @@ void *routine_monitor(void *arg)
 	{
 		if (check_end(data, data->philos))
 			break ;
-		// TODO: LOS FILÓSOFOS SI HAN TERMINADO DE COMER, autonomamente se mueren, por lo que en create_threads_and_join.c 
-		// se pondra mute en ON
+		pthread_mutex_lock(&data->m_write);
 		// TODO: chequear si mute de data está ON y si lo está es que todo quisqui ha comido y puedo salir
+		if (data->mute == ON)
+			return (pthread_mutex_unlock(&data->m_write), printf("hurray\n"), NULL);
+		pthread_mutex_unlock(&data->m_write);
 	}
 	return (NULL);
 }

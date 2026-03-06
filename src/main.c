@@ -6,7 +6,7 @@
 /*   By: saalarco <saalarco@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/16 08:37:16 by saalarco          #+#    #+#             */
-/*   Updated: 2026/02/24 18:56:34 by saalarco         ###   ########.fr       */
+/*   Updated: 2026/03/06 20:34:44 by saalarco         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,9 +48,7 @@ int	main(int argc, char const **argv)
     // TODO: refactor este return en una función en alloc utils
     if (alloc_threads(&data))
         return (printf("Malloc error\n"), destroy_philos(&data), data_mutex_destroy(&data), free_philos_and_forks(&data), 1);
-
     create_threads_and_join(&data);
-
     // TODO: refactor este return en una función en alloc utils
     return (free_threads(&data), destroy_philos(&data), data_mutex_destroy(&data), free_philos_and_forks(&data), 0);
 }

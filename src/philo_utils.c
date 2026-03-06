@@ -6,7 +6,7 @@
 /*   By: saalarco <saalarco@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/24 16:59:57 by saalarco          #+#    #+#             */
-/*   Updated: 2026/02/24 18:47:55 by saalarco         ###   ########.fr       */
+/*   Updated: 2026/03/06 19:42:38 by saalarco         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,13 @@
 int is_odd(int id)
 {
 	if (id % 2 != 0)
+		return (0);
+	return (1);
+}
+
+int is_even(int id)
+{
+	if (id % 2 == 0)
 		return (0);
 	return (1);
 }
